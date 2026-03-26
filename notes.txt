@@ -1,0 +1,16 @@
+camelCase routes naming conventions
+
+
+- POST /api/auth/register
+    - body: { "username": string, "email": string, "password": string }
+- POST /api/auth/login
+    - body: { "email": string, "password": string }
+    - response: { "token": string, "user": { id, username, email } }
+    - client must send Authorization: Bearer <token> for protected routes
+- POST /api/games/complete
+    - headers: Authorization: Bearer <token>
+    - body: { "rounds": number, "userWin": boolean }
+    - server sets date_completed to NOW()
+- GET /api/games/history
+    - headers: Authorization: Bearer <token>
+    - response: DbGame[] (id, date_completed, user_win, rounds, user_id)
