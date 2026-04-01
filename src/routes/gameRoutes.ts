@@ -1,13 +1,10 @@
 import { Router } from "express";
-import { authMiddleware } from "../middleware/authMiddleware";
-import {
-  completeGameHandler,
-  getGameHistoryHandler,
-} from "../controllers/gameController";
+import { authMiddleware } from "../middleware/auth";
+import { saveFinishedGame, getUserGames } from "../controllers/gameController";
 
-export const gameRouter = Router();
+const router = Router();
 
-gameRouter.use(authMiddleware);
+router.post("/games/finish", authMiddleware, saveFinishedGame);
+router.get("/games", authMiddleware, getUserGames);
 
-gameRouter.post("/games/complete", completeGameHandler);
-gameRouter.get("/games/history", getGameHistoryHandler);
+export default router;

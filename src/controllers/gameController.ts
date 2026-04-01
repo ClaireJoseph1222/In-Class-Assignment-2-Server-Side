@@ -1,56 +1,38 @@
-import { Response } from "express";
-import { AuthenticatedRequest } from "../middleware/authMiddleware";
+import { Request, Response } from "express";
 import { createGameRecord, getGamesForUser } from "../models/gameModel";
-import { logger } from "../config/logger";
 
-interface CompleteGameBody {
-  rounds?: number;
-  userWin?: boolean;
-}
-
-export const completeGameHandler = async (
-  req: AuthenticatedRequest,
-  res: Response,
-): Promise<void> => {
-  const userId = req.userId;
-  const { rounds, userWin } = req.body as CompleteGameBody;
-
-  if (!userId) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
-
-  if (rounds === undefined || userWin === undefined) {
-    res.status(400).json({ message: "Missing fields" });
-    return;
-  }
-
+export const saveFinishedGame = async (req: Request, res: Response) => {
   try {
-    const game = await createGameRecord(userId, rounds, userWin, new Date());
-    logger.info({ userId, gameId: game.id }, "Game recorded");
+    const userId = req.user!.id;
+    const { rounds, didWin } = req.body;
+
+    if (typeof rounds !== "number" || typeof didWin !== "boolean") {
+      return res.status(400).json({ error: "Invalid game data" });
+    }
+
+    const finishedAt = new Date();
+
+    const game = await createGameRecord(
+      userId,
+      rounds,
+      didWin,
+      finishedAt
+    );
+
     res.status(201).json(game);
-  } catch (error) {
-    logger.error({ error, userId }, "Complete game failed");
-    res.status(500).json({ message: "Failed to save game" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to save game" });
   }
 };
 
-export const getGameHistoryHandler = async (
-  req: AuthenticatedRequest,
-  res: Response,
-): Promise<void> => {
-  const userId = req.userId;
-
-  if (!userId) {
-    res.status(401).json({ message: "Unauthorized" });
-    return;
-  }
-
+export const getUserGames = async (req: Request, res: Response) => {
   try {
+    const userId = req.user!.id;
     const games = await getGamesForUser(userId);
     res.json(games);
-  } catch (error) {
-    logger.error({ error, userId }, "Get history failed");
-    res.status(500).json({ message: "Failed to load game history" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch games" });
   }
 };

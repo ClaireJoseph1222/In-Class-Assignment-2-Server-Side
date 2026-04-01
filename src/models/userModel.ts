@@ -1,49 +1,43 @@
 import { getDbPool } from "../config/db";
-import { DbUser } from "../types/db";
-import { ResultSetHeader, RowDataPacket } from "mysql2";
+import type { User } from "../types/user";
+import { RowDataPacket, ResultSetHeader } from "mysql2";
 
-export const findUserByEmail = async (
-  email: string,
-): Promise<DbUser | null> => {
-  const pool = getDbPool();
+const pool = getDbPool();
 
-  const [rows] = await pool.query<(DbUser & RowDataPacket)[]>(
-    "SELECT * FROM user WHERE email = ?",
-    [email],
+interface DbUserRow {
+  id: number;
+  name: string;
+  password_hash: string;
+}
+
+export const findUserByName = async (name: string): Promise<User | null> => {
+  const [rows] = await pool.query<(DbUserRow & RowDataPacket)[]>(
+    "SELECT id, name, password_hash FROM users WHERE name = ?",
+    [name]
   );
 
-  return rows[0] ?? null;
-};
+  if (rows.length === 0) return null;
 
-export const findUserById = async (id: number): Promise<DbUser | null> => {
-  const pool = getDbPool();
-
-  const [rows] = await pool.query<(DbUser & RowDataPacket)[]>(
-    "SELECT * FROM user WHERE id = ?",
-    [id],
-  );
-
-  return rows[0] ?? null;
+  const row = rows[0];
+  return {
+    id: row.id,
+    name: row.name,
+    passwordHash: row.password_hash
+  };
 };
 
 export const createUser = async (
-  username: string,
-  email: string,
-  passwordHash: string,
-): Promise<DbUser> => {
-  const pool = getDbPool();
-
-  const [result] = await pool.execute<ResultSetHeader>(
-    "INSERT INTO user (username, email, user_password) VALUES (?, ?, ?)",
-    [username, email, passwordHash],
+  name: string,
+  passwordHash: string
+): Promise<User> => {
+  const [result] = await pool.query<ResultSetHeader>(
+    "INSERT INTO users (name, password_hash) VALUES (?, ?)",
+    [name, passwordHash]
   );
 
-  const id = result.insertId;
-
-  const user = await findUserById(id);
-  if (!user) {
-    throw new Error("Failed to create user");
-  }
-
-  return user;
+  return {
+    id: result.insertId,
+    name,
+    passwordHash
+  };
 };

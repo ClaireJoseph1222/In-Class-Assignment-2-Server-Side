@@ -1,18 +1,19 @@
-import mysql, { Pool } from "mysql2/promise";
-import { env } from "./env";
+import mysql from "mysql2/promise";
+import dotenv from "dotenv";
 
-let pool: Pool | null = null;
+dotenv.config();
 
-export const getDbPool = (): Pool => {
-  if (pool === null) {
+let pool: mysql.Pool;
+
+export const getDbPool = () => {
+  if (!pool) {
     pool = mysql.createPool({
-      host: env.dbHost,
-      user: env.dbUser,
-      password: env.dbPassword,
-      database: env.dbName,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_NAME,
+      port: Number(process.env.DB_PORT) || 3306,
+      connectionLimit: 10
     });
   }
   return pool;

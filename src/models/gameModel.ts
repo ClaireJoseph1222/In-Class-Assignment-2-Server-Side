@@ -1,41 +1,34 @@
 import { getDbPool } from "../config/db";
-import { DbGame } from "../types/db";
-import { ResultSetHeader, RowDataPacket } from "mysql2";
+import { RowDataPacket, ResultSetHeader } from "mysql2";
+import type { DbGame } from "../types/db";
+
+const pool = getDbPool();
 
 export const createGameRecord = async (
   userId: number,
   rounds: number,
-  userWin: boolean,
-  dateCompleted: Date,
+  didWin: boolean,
+  finishedAt: Date
 ): Promise<DbGame> => {
-  const pool = getDbPool();
-
-  const [result] = await pool.execute<ResultSetHeader>(
-    "INSERT INTO game (date_completed, user_win, rounds, user_id) VALUES (?, ?, ?, ?)",
-    [dateCompleted, userWin, rounds, userId],
+  const [result] = await pool.query<ResultSetHeader>(
+    "INSERT INTO games (user_id, rounds, did_win, finished_at) VALUES (?, ?, ?, ?)",
+    [userId, rounds, didWin, finishedAt]
   );
 
   const id = result.insertId;
 
   const [rows] = await pool.query<(DbGame & RowDataPacket)[]>(
-    "SELECT * FROM game WHERE id = ?",
-    [id],
+    "SELECT * FROM games WHERE id = ?",
+    [id]
   );
 
-  const game = rows[0];
-  if (!game) {
-    throw new Error("Failed to create game record");
-  }
-
-  return game;
+  return rows[0];
 };
 
 export const getGamesForUser = async (userId: number): Promise<DbGame[]> => {
-  const pool = getDbPool();
-
   const [rows] = await pool.query<(DbGame & RowDataPacket)[]>(
-    "SELECT * FROM game WHERE user_id = ? ORDER BY date_completed DESC",
-    [userId],
+    "SELECT * FROM games WHERE user_id = ? ORDER BY finished_at DESC",
+    [userId]
   );
 
   return rows;

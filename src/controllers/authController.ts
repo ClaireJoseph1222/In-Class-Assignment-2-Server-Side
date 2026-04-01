@@ -1,61 +1,65 @@
 import { Request, Response } from "express";
-import { registerUser, loginUser } from "../services/authService";
-import { logger } from "../config/logger";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import { findUserByName, createUser } from "../models/userModel";
+import type { AuthTokenPayload } from "../types/auth";
 
-interface RegisterBody {
-  username?: string;
-  email?: string;
-  password?: string;
-}
-
-interface LoginBody {
-  email?: string;
-  password?: string;
-}
-
-export const registerHandler = async (
-  req: Request<unknown, unknown, RegisterBody>,
-  res: Response,
-): Promise<void> => {
-  const { username, email, password } = req.body;
-
-  if (!username || !email || !password) {
-    res.status(400).json({ message: "Missing fields" });
-    return;
-  }
-
+export const registerUser = async (req: Request, res: Response) => {
   try {
-    const user = await registerUser(username, email, password);
-    logger.info({ userId: user.id }, "User registered");
-    res
-      .status(201)
-      .json({ id: user.id, username: user.username, email: user.email });
-  } catch (error) {
-    logger.error({ error }, "Register failed");
-    res.status(400).json({ message: (error as Error).message });
+    const { name, password } = req.body;
+
+    if (!name || !password) {
+      return res.status(400).json({ error: "Missing name or password" });
+    }
+
+    const existing = await findUserByName(name);
+    if (existing) {
+      return res.status(400).json({ error: "User already exists" });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await createUser(name, passwordHash);
+
+    res.status(201).json({
+      id: user.id,
+      name: user.name
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Registration failed" });
   }
 };
 
-export const loginHandler = async (
-  req: Request<unknown, unknown, LoginBody>,
-  res: Response,
-): Promise<void> => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
-    res.status(400).json({ message: "Missing fields" });
-    return;
-  }
-
+export const loginUser = async (req: Request, res: Response) => {
   try {
-    const { token, user } = await loginUser(email, password);
-    logger.info({ userId: user.id }, "User logged in");
-    res.json({
-      token,
-      user: { id: user.id, username: user.username, email: user.email },
+    const { name, password } = req.body;
+
+    if (!name || !password) {
+      return res.status(400).json({ error: "Missing name or password" });
+    }
+
+    const user = await findUserByName(name);
+    if (!user) {
+      return res.status(400).json({ error: "Invalid credentials" });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      return res.status(400).json({ error: "Invalid credentials" });
+    }
+
+    const payload: AuthTokenPayload = {
+      id: user.id,
+      name: user.name
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET!, {
+      expiresIn: "7d"
     });
-  } catch (error) {
-    logger.error({ error }, "Login failed");
-    res.status(401).json({ message: (error as Error).message });
+
+    res.json({ token });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Login failed" });
   }
 };

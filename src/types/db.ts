@@ -1,14 +1,13 @@
 export interface DbUser {
   id: number;
-  username: string;
-  email: string;
-  user_password: string;
+  name: string;
+  password_hash: string;
 }
 
 export interface DbGame {
   id: number;
-  date_completed: Date;
-  user_win: boolean;
-  rounds: number;
   user_id: number;
+  rounds: number;
+  did_win: boolean;
+  finished_at: Date;
 }

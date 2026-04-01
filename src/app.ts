@@ -1,29 +1,22 @@
-import express, { Request, Response, NextFunction } from "express";
+import express from "express";
 import cors from "cors";
-import { authRouter } from "./routes/authRoutes";
-import { gameRouter } from "./routes/gameRoutes";
-import { logger } from "./config/logger";
+import authRoutes from "./routes/authRoutes";
+import gameRoutes from "./routes/gameRoutes";
+import { requestLogger } from "./middleware/requestLogger";
+import { errorHandler } from "./middleware/errorHandler";
 
 export const createApp = (): express.Express => {
   const app = express();
 
   app.use(cors());
+  app.use(express.urlencoded({ extended: false }));
   app.use(express.json());
+  app.use(requestLogger);
 
-  app.use("/api/auth", authRouter);
-  app.use("/api", gameRouter);
+  app.use(authRoutes);
+  app.use(gameRoutes);
 
-  app.get("/health", (_req: Request, res: Response) => {
-    res.json({ status: "ok" });
-  });
-
-  app.use(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    (err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-      logger.error({ err }, "Unhandled error");
-      res.status(500).json({ message: "Internal server error" });
-    },
-  );
+  app.use(errorHandler);
 
   return app;
 };
