@@ -14,3 +14,21 @@ camelCase routes naming conventions
 - GET /api/games/history
     - headers: Authorization: Bearer <token>
     - response: DbGame[] (id, date_completed, user_win, rounds, user_id)
+
+
+
+CREATE TABLE games (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    rounds INT NOT NULL,
+    did_win BOOLEAN NOT NULL,
+    finished_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL
+);
